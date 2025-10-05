@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sky Hop - Easy Mode</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  background: linear-gradient(to bottom, #1e3c72, #2a5298);
+  font-family: sans-serif;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  touch-action: manipulation;
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Bird image
+const birdImg = new Image();
+birdImg.src = 'C:/Users/USER/Downloads/Flappy.jpg';
+
+let bird = { x: 80, y: canvas.height/2, width: 40, height: 40, velocity: 0 };
+let gravity = 0.3;
+let flap = -6;
+let pipes = [];
+let pipeGap = 250; // wider gap
+let pipeWidth = 70;
+let pipeSpeed = 2.5;
+let frame = 0;
+let score = 0;
+let gameOver = false;
+
+function resetGame() {
+  bird.y = canvas.height/2;
+  bird.velocity = 0;
+  pipes = [];
+  score = 0;
+  frame = 0;
+  gameOver = false;
+}
+
+function drawBird() {
+  const tilt = Math.min(Math.max(bird.velocity / 8, -0.5), 0.5);
+  ctx.save();
+  ctx.translate(bird.x, bird.y);
+  ctx.rotate(tilt);
+  ctx.drawImage(birdImg, -bird.width/2, -bird.height/2, bird.width, bird.height);
+  ctx.restore();
+}
+
+function drawPipes() {
+  ctx.fillStyle = '#2ecc71';
+  pipes.forEach(pipe => {
+    ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+    ctx.fillRect(pipe.x, pipe.top + pipeGap, pipeWidth, canvas.height - pipe.top - pipeGap);
+  });
+}
+
+function update() {
+  if (gameOver) return;
+  bird.velocity += gravity;
+  bird.y += bird.velocity;
+
+  if (frame % 100 === 0) {
+    const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
+    pipes.push({ x: canvas.width, top });
+  }
+
+  pipes.forEach(pipe => pipe.x -= pipeSpeed);
+  pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+
+  pipes.forEach(pipe => {
+    if (bird.x + bird.width/2 > pipe.x && bird.x - bird.width/2 < pipe.x + pipeWidth && (bird.y - bird.height/2 < pipe.top || bird.y + bird.height/2 > pipe.top + pipeGap)) {
+      gameOver = true;
+    }
+    if (pipe.x + pipeWidth === Math.floor(bird.x)) {
+      score++;
+    }
+  });
+
+  if (bird.y + bird.height/2 > canvas.height || bird.y - bird.height/2 < 0) {
+    gameOver = true;
+  }
+  frame++;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawPipes();
+  drawBird();
+
+  ctx.fillStyle = 'white';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('Score: ' + score, 20, 40);
+
+  if(gameOver){
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='white';
+    ctx.font='48px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Game Over', canvas.width/2, canvas.height/2);
+    ctx.font='24px sans-serif';
+    ctx.fillText('Tap to restart', canvas.width/2, canvas.height/2+40);
+  }
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+canvas.addEventListener('mousedown', handleFlap);
+canvas.addEventListener('touchstart', handleFlap);
+
+function handleFlap(){
+  if(gameOver){ resetGame(); }
+  else { bird.velocity = flap; }
+}
+
+window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+loop();
+</script>
+</body>
+</html>
