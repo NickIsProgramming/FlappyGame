@@ -1,104 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sky Hop - Game</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sky Hop - Easy Mode</title>
 <style>
-  body, html {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', sans-serif;
-    height: 100%;
-    overflow-x: hidden;
-    background: linear-gradient(to right, #1e3c72, #2a5298);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-
-  h1 {
-    font-size: 3em;
-    margin-bottom: 0.2em;
-    animation: fadeIn 2s ease-in-out;
-  }
-
-  p {
-    font-size: 1.2em;
-    margin-bottom: 2em;
-    animation: fadeIn 2s ease-in-out 0.5s;
-  }
-
-  a.download-btn {
-    text-decoration: none;
-    color: white;
-    background: #ff7f50;
-    padding: 15px 30px;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 1.2em;
-    transition: all 0.3s ease;
-    animation: fadeIn 2s ease-in-out 1s;
-  }
-
-  a.download-btn:hover {
-    background: #ff4500;
-    transform: scale(1.05);
-  }
-
-  .button-container {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-  }
-
-  /* Background animation */
-  .bg-circles {
-    position: fixed;
-    top:0; left:0;
-    width:100%;
-    height:100%;
-    z-index:-1;
-    overflow:hidden;
-  }
-
-  .bg-circles div {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    animation: float 20s linear infinite;
-  }
-
-  @keyframes float {
-    0% {transform: translateY(100vh) rotate(0deg);}
-    100% {transform: translateY(-100vh) rotate(360deg);}
-  }
-
-  @keyframes fadeIn {
-    0% {opacity: 0; transform: translateY(-20px);}
-    100% {opacity:1; transform: translateY(0);}
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  background: linear-gradient(to bottom, #1e3c72, #2a5298);
+  font-family: sans-serif;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  touch-action: manipulation;
+}
 </style>
 </head>
 <body>
+<canvas id="gameCanvas"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-<div class="bg-circles">
-  <div style="width:100px;height:100px;left:10%;animation-duration:25s;"></div>
-  <div style="width:150px;height:150px;left:70%;animation-duration:30s;"></div>
-  <div style="width:80px;height:80px;left:50%;animation-duration:22s;"></div>
-  <div style="width:120px;height:120px;left:30%;animation-duration:28s;"></div>
-</div>
+// Bird image
+const birdImg = new Image();
+birdImg.src = 'C:/Users/USER/Downloads/Flappy.jpg';
 
-<h1>Sky Hop</h1>
-<p>Fly your bird through the obstacles and achieve the highest score! Download and play on your mobile or desktop.</p>
+let bird = { x: 80, y: canvas.height/2, width: 40, height: 40, velocity: 0 };
+let gravity = 0.3;
+let flap = -6;
+let pipes = [];
+let pipeGap = 250; // wider gap
+let pipeWidth = 70;
+let pipeSpeed = 2.5;
+let frame = 0;
+let score = 0;
+let gameOver = false;
 
-<div class="button-container">
-  <a class="download-btn" href="FlappyBird.zip" download>Download Game</a>
-  <a class="download-btn" href="FlappyBird/index.html" target="_blank">Play Online</a>
-</div>
+function resetGame() {
+  bird.y = canvas.height/2;
+  bird.velocity = 0;
+  pipes = [];
+  score = 0;
+  frame = 0;
+  gameOver = false;
+}
 
+function drawBird() {
+  const tilt = Math.min(Math.max(bird.velocity / 8, -0.5), 0.5);
+  ctx.save();
+  ctx.translate(bird.x, bird.y);
+  ctx.rotate(tilt);
+  ctx.drawImage(birdImg, -bird.width/2, -bird.height/2, bird.width, bird.height);
+  ctx.restore();
+}
+
+function drawPipes() {
+  ctx.fillStyle = '#2ecc71';
+  pipes.forEach(pipe => {
+    ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+    ctx.fillRect(pipe.x, pipe.top + pipeGap, pipeWidth, canvas.height - pipe.top - pipeGap);
+  });
+}
+
+function update() {
+  if (gameOver) return;
+  bird.velocity += gravity;
+  bird.y += bird.velocity;
+
+  if (frame % 100 === 0) {
+    const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
+    pipes.push({ x: canvas.width, top });
+  }
+
+  pipes.forEach(pipe => pipe.x -= pipeSpeed);
+  pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+
+  pipes.forEach(pipe => {
+    if (bird.x + bird.width/2 > pipe.x && bird.x - bird.width/2 < pipe.x + pipeWidth && (bird.y - bird.height/2 < pipe.top || bird.y + bird.height/2 > pipe.top + pipeGap)) {
+      gameOver = true;
+    }
+    if (pipe.x + pipeWidth === Math.floor(bird.x)) {
+      score++;
+    }
+  });
+
+  if (bird.y + bird.height/2 > canvas.height || bird.y - bird.height/2 < 0) {
+    gameOver = true;
+  }
+  frame++;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawPipes();
+  drawBird();
+
+  ctx.fillStyle = 'white';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('Score: ' + score, 20, 40);
+
+  if(gameOver){
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='white';
+    ctx.font='48px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Game Over', canvas.width/2, canvas.height/2);
+    ctx.font='24px sans-serif';
+    ctx.fillText('Tap to restart', canvas.width/2, canvas.height/2+40);
+  }
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+canvas.addEventListener('mousedown', handleFlap);
+canvas.addEventListener('touchstart', handleFlap);
+
+function handleFlap(){
+  if(gameOver){ resetGame(); }
+  else { bird.velocity = flap; }
+}
+
+window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+loop();
+</script>
 </body>
 </html>
